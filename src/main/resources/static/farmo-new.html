@@ -257,7 +257,7 @@
     setFarmoBubble('<div class="typing"><span></span><span></span><span></span></div>');
     document.getElementById('farmoStatus').textContent = '● 분석 중...';
     try {
-      const res = await fetch(`http://localhost:8080/irrigation?nx=${currentNx}&ny=${currentNy}`);
+      const res = await fetch(`https://weather-irrigation-production.up.railway.app/irrigation?nx=${currentNx}&ny=${currentNy}`);
       const text = await res.text();
       updateUI(text);
     } catch(e) {

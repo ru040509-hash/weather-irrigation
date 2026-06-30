@@ -6,7 +6,7 @@
   <title>Farmo</title>
   <link rel="icon" type="image/png" href="/logo.png"/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=708ffbaf1675d27c91c104e2bd73878f&autoload=false"></script>
   <style>
     :root{
       --soil-900:#3a2c1c;
@@ -26,7 +26,7 @@
       --risk-bg:#fbe9e2; --risk-line:#bb5e3c; --risk-text:#8a3f24;
     }
     *{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%}
+    html,body{height:100%;overflow-x:hidden;width:100%}
     body{
       background:var(--paper);
       color:var(--ink);
@@ -56,7 +56,11 @@
     .shell{
       display:grid;
       grid-template-columns:340px 1fr;
+      align-items:start;
       min-height:calc(100vh - 64px);
+      width:100%;
+      max-width:100vw;
+      overflow:hidden;
       transition:grid-template-columns .28s cubic-bezier(.4,0,.2,1);
     }
     .shell.collapsed{grid-template-columns:0px 1fr}
@@ -139,7 +143,7 @@
     .spinner{width:13px;height:13px;border:2px solid rgba(250,246,239,.35);border-top-color:var(--paper);border-radius:50%;animation:spin .7s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
 
-    .stage{position:relative;background:var(--paper);height:calc(100vh - 64px)}
+    .stage{position:relative;background:var(--paper);height:calc(100vh - 64px);align-self:stretch;min-width:0;overflow:hidden}
     #map{width:100%;height:100%;min-height:340px}
 
     .rail-toggle{
@@ -157,7 +161,7 @@
     .rail-toggle:hover{transform:translateY(-50%) scale(1.06)}
 
     .location-chip{
-      position:absolute;top:20px;left:20px;z-index:900;
+      position:absolute;top:20px;left:70px;z-index:40;
       background:var(--panel);border:1px solid var(--line);border-radius:10px;
       padding:10px 16px;box-shadow:0 2px 10px rgba(58,44,28,.12);
       font-size:13px;color:var(--ink);
@@ -354,7 +358,6 @@
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
   const regionData = {
     "서울특별시": {"종로구":[60,127],"중구":[60,127],"용산구":[60,126],"성동구":[61,127],"광진구":[62,127],"동대문구":[61,127],"중랑구":[62,128],"성북구":[61,127],"강북구":[61,128],"도봉구":[61,129],"노원구":[61,129],"은평구":[59,127],"서대문구":[59,127],"마포구":[59,127],"양천구":[58,126],"강서구":[57,126],"구로구":[58,125],"금천구":[59,124],"영등포구":[58,126],"동작구":[59,125],"관악구":[59,125],"서초구":[61,125],"강남구":[61,126],"송파구":[62,126],"강동구":[62,126]},
@@ -405,7 +408,12 @@
     const btn=document.getElementById('railToggle');
     shell.classList.toggle('collapsed', !railOpen);
     btn.classList.toggle('is-collapsed', !railOpen);
+    setTimeout(()=>{ if(map) map.relayout(); }, 300);
   }
+
+  window.addEventListener('resize', ()=>{
+    if(map) map.relayout();
+  });
 
   let farmoOpen=false;
   function toggleFarmo(){
@@ -448,16 +456,25 @@
   }
 
   let map,marker;
-  function initMap(lat,lng){
-    if(!map){
-      map=L.map('map').setView([lat,lng],10);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
-      marker=L.marker([lat,lng]).addTo(map);
-    }else{
-      map.setView([lat,lng],10);
-      marker.setLatLng([lat,lng]);
+  function initMap(lat, lng) {
+    const container = document.getElementById('map');
+    const options = {
+      center: new kakao.maps.LatLng(lat, lng),
+      level: 10
+    };
+
+    if (!map) {
+      map = new kakao.maps.Map(container, options);
+      marker = new kakao.maps.Marker({
+        position: new kakao.maps.LatLng(lat, lng)
+      });
+      marker.setMap(map);
+    } else {
+      const moveLatLng = new kakao.maps.LatLng(lat, lng);
+      map.setCenter(moveLatLng);
+      marker.setPosition(moveLatLng);
     }
-    setTimeout(()=>{ if(map) map.invalidateSize(); }, 300);
+    setTimeout(()=>{ if(map) map.relayout(); }, 300);
   }
 
   function renderRainBars(hours){
@@ -480,7 +497,9 @@
   renderRainBars(Array.from({length:8},(_,i)=>({label:'--',pop:0})));
 
   window.onload=function(){
-    initMap(36.5,127.5);
+    kakao.maps.load(function(){
+      initMap(36.5,127.5);
+    });
     setTimeout(()=>{
       setFarmoMsg('안녕하세요. 저는 <b>Farmo</b>예요. 시/도와 시/군/구를 선택하고 조회 버튼을 누르면 오늘 관개 여부를 알려드릴게요.');
     },500);

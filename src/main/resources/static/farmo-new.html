@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Farmo</title>
   <link rel="icon" type="image/png" href="/logo.png"/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=df232cabc589cddef8a93f2e67b7d977&autoload=false"></script>
+
   <style>
     :root{
       --soil-900:#3a2c1c;
@@ -236,7 +235,7 @@
       .rail{order:1;border-right:none;border-bottom:1px solid var(--line)}
       .rail-inner{width:100%}
       .shell.collapsed .rail{display:none}
-      .stage{order:2;height:auto}
+      .stage{order:2}
       #map{min-height:240px;height:240px}
       .rail-toggle{top:14px;left:14px}
       .location-chip{top:14px;left:64px}
@@ -358,6 +357,7 @@
   </div>
 </div>
 
+<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=df232cabc589cddef8a93f2e67b7d977&libraries=clusterer,services&autoload=false"></script>
 <script>
   const regionData = {
     "서울특별시": {"종로구":[60,127],"중구":[60,127],"용산구":[60,126],"성동구":[61,127],"광진구":[62,127],"동대문구":[61,127],"중랑구":[62,128],"성북구":[61,127],"강북구":[61,128],"도봉구":[61,129],"노원구":[61,129],"은평구":[59,127],"서대문구":[59,127],"마포구":[59,127],"양천구":[58,126],"강서구":[57,126],"구로구":[58,125],"금천구":[59,124],"영등포구":[58,126],"동작구":[59,125],"관악구":[59,125],"서초구":[61,125],"강남구":[61,126],"송파구":[62,126],"강동구":[62,126]},
@@ -465,6 +465,8 @@
 
     if (!map) {
       map = new kakao.maps.Map(container, options);
+      map.setDraggable(true);
+      map.setZoomable(true);
       marker = new kakao.maps.Marker({
         position: new kakao.maps.LatLng(lat, lng)
       });

@@ -101,19 +101,6 @@
     .metric-val{font-family:'Fraunces',serif;font-size:26px;font-weight:600;line-height:1;color:var(--ink)}
     .metric-label{font-size:11px;color:var(--soil-700);margin-top:6px;letter-spacing:.02em}
 
-    .rain-card{
-      border:1px solid var(--line);border-radius:10px;padding:14px 16px 12px;
-      background:var(--paper);
-    }
-    .rain-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
-    .rain-head-label{font-size:11px;color:var(--soil-700);letter-spacing:.02em}
-    .rain-head-val{font-family:'Fraunces',serif;font-size:15px;color:var(--ink)}
-    .rain-bars{display:flex;align-items:flex-end;gap:4px;height:56px}
-    .rain-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
-    .rain-bar{width:100%;border-radius:3px 3px 0 0;background:var(--sand);transition:height .4s ease,background .4s ease;min-height:6px}
-    .rain-bar.active{background:linear-gradient(180deg,#7fa3d8,#4a6fa5)}
-    .rain-tick{font-size:9px;color:var(--soil-700);opacity:.8}
-
     .verdict{
       border-radius:12px;padding:20px 18px;text-align:left;
       border:1.5px solid var(--line);background:var(--paper);
@@ -294,17 +281,6 @@
       </div>
 
       <div>
-        <span class="field-label">시간대별 강수확률</span>
-        <div class="rain-card">
-          <div class="rain-head">
-            <span class="rain-head-label">오늘 ~ 내일</span>
-            <span class="rain-head-val" id="rainPeak">— %</span>
-          </div>
-          <div class="rain-bars" id="rainBars"></div>
-        </div>
-      </div>
-
-      <div>
         <span class="field-label">관개 판단</span>
         <div class="verdict" id="verdict">
           <div class="verdict-eyebrow">대기 중</div>
@@ -479,25 +455,6 @@
     setTimeout(()=>{ if(map) map.relayout(); }, 300);
   }
 
-  function renderRainBars(hours){
-    const wrap=document.getElementById('rainBars');
-    wrap.innerHTML='';
-    hours.forEach(h=>{
-      const barWrap=document.createElement('div');
-      barWrap.className='rain-bar-wrap';
-      const bar=document.createElement('div');
-      bar.className='rain-bar'+(h.pop>=50?' active':'');
-      bar.style.height=Math.max(h.pop,8)+'%';
-      const tick=document.createElement('div');
-      tick.className='rain-tick';
-      tick.textContent=h.label;
-      barWrap.appendChild(bar);
-      barWrap.appendChild(tick);
-      wrap.appendChild(barWrap);
-    });
-  }
-  renderRainBars(Array.from({length:8},(_,i)=>({label:'--',pop:0})));
-
   window.onload=function(){
     kakao.maps.load(function(){
       initMap(36.5,127.5);
@@ -518,84 +475,3 @@
     document.getElementById('btnLabel').innerHTML='<span class="spinner"></span> 분석 중';
     if(!farmoOpen) toggleFarmo();
     setFarmoMsg('<div class="typing"><span></span><span></span><span></span></div>');
-    document.getElementById('farmoStatus').textContent='분석 중';
-    try{
-      const res=await fetch(`https://weather-irrigation-production.up.railway.app/irrigation?nx=${currentNx}&ny=${currentNy}`);
-      const text=await res.text();
-      updateUI(text);
-    }catch(e){
-      setFarmoMsg('서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.');
-      document.getElementById('farmoStatus').textContent='오류';
-    }finally{
-      btn.disabled=false;
-      document.getElementById('btnLabel').textContent='관개 판단 조회';
-    }
-  }
-
-  function updateUI(result){
-    const tempMatch=result.match(/평균기온\s*([\d.]+)도/);
-    let popMatch=result.match(/강수확률\s*(?:최대\s*)?([\d]+)%/);
-    if(!popMatch) popMatch=result.match(/([\d]+)\s*%/);
-    const pop=popMatch?parseInt(popMatch[1]):0;
-    const temp=tempMatch?parseFloat(tempMatch[1]):0;
-
-    document.getElementById('wTemp').textContent=isNaN(temp)?'—':temp;
-    document.getElementById('wPop').textContent=isNaN(pop)?0:pop;
-    document.getElementById('wReh').textContent=Math.round(40+pop*0.45);
-    document.getElementById('wSky').textContent=pop>=60?'흐림':pop>=30?'구름많음':'맑음';
-
-    const now=new Date();
-    const safePop = pop || 10;
-    const bars=Array.from({length:8},(_,i)=>{
-      const h=(now.getHours()+i*3)%24;
-      const wave=Math.sin(i/7*Math.PI);
-      const val=Math.round(safePop*wave*0.9 + safePop*0.1);
-      return {label:String(h).padStart(2,'0')+'시', pop:Math.max(val,8)};
-    });
-    renderRainBars(bars);
-    document.getElementById('rainPeak').textContent=`최고 ${pop}%`;
-
-    let cls,eyebrow,title,sub,farmoMsg,dot,label;
-    if(result.includes('보류')){
-      cls='risk'; eyebrow='관개 보류'; title='오늘은 물을 주지 않아도 돼요';
-      sub=`강수확률 ${pop}% — 비가 예보되어 있어 토양에 수분이 충분히 공급될 거예요.`;
-      farmoMsg='비 예보가 있어요. <b>오늘은 관개를 보류하셔도 됩니다.</b> 빗물로 충분히 수분이 공급될 거예요.';
-      dot='dot-risk'; label='보류 권장';
-    }else if(result.includes('권장')){
-      cls='warn'; eyebrow='관개 권장'; title='오늘 오전 중 물을 주세요';
-      sub=`평균기온 ${temp}℃, 강수확률 낮음 — 고온으로 작물에 수분이 필요해요.`;
-      farmoMsg='기온이 높고 비 예보가 없어요. <b>오전 일찍 관개</b>하시는 걸 추천해요.';
-      dot='dot-warn'; label='관개 권장';
-    }else{
-      cls='safe'; eyebrow='관개 불필요'; title='지금 상태는 안정적이에요';
-      sub=`평균기온 ${temp}℃, 강수확률 ${pop}% — 평소대로 두셔도 괜찮습니다.`;
-      farmoMsg='현재 기상 조건이 안정적이에요. <b>오늘 관개는 불필요</b>합니다.';
-      dot='dot-safe'; label='불필요';
-    }
-
-    const v=document.getElementById('verdict');
-    v.className=`verdict ${cls}`;
-    v.querySelector('.verdict-eyebrow').textContent=eyebrow;
-    v.querySelector('.verdict-title').textContent=title;
-    v.querySelector('.verdict-sub').textContent=sub;
-
-    setFarmoMsg(farmoMsg);
-    document.getElementById('farmoStatus').textContent='분석 완료';
-    addHistory(dot,label,currentRegionName);
-  }
-
-  function setFarmoMsg(html){ document.getElementById('farmoMsg').innerHTML=html; }
-
-  function addHistory(dot,label,region){
-    const list=document.getElementById('historyList');
-    const empty=list.querySelector('.history-empty');
-    if(empty) empty.remove();
-    const time=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
-    const item=document.createElement('div');
-    item.className='history-item';
-    item.innerHTML=`<div class="history-dot ${dot}"></div><span>${region}</span><span style="margin-left:auto;font-weight:600">${label}</span><span class="history-time">${time}</span>`;
-    list.prepend(item);
-  }
-</script>
-</body>
-</html>

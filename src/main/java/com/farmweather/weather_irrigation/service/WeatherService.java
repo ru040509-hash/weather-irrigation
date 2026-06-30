@@ -19,7 +19,7 @@ public class WeatherService {
     private static final String BASE_URL = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst";
 
     // Claude API 키 (내일 선생님께 받으면 여기 입력)
-    private static final String CLAUDE_API_KEY = "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";
+    private static final String CLAUDE_API_KEY = System.getenv("CLAUDE_API_KEY");
     private static final String CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
     private final OkHttpClient httpClient = new OkHttpClient();

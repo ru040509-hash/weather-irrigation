@@ -5,167 +5,352 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Farmo</title>
   <link rel="icon" type="image/png" href="/logo.png"/>
-  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --soil:   #3b2a1a;
-      --bark:   #6b4c2a;
-      --straw:  #c8a96e;
-      --cream:  #f7f2e8;
-      --fog:    #ece6d8;
-      --leaf:   #4e7c3f;
-      --sprout: #7eb563;
-      --sun:    #e8a030;
-      --risk:   #c85040;
-      --muted:  #9a8870;
-      --r: 12px;
+    :root{
+      --soil-900:#3a2c1c;
+      --soil-800:#5a4530;
+      --soil-700:#7a6045;
+      --paper:#faf6ef;
+      --panel:#ffffff;
+      --line:#e8ddc8;
+      --line-dark:#ded0b3;
+      --moss:#5c7a3f;
+      --moss-dim:#8a9a6d;
+      --clay:#bb5e3c;
+      --sand:#9c8a6a;
+      --ink:#3a2c1c;
+      --safe-bg:#eef4e6; --safe-line:#5c7a3f; --safe-text:#3f5527;
+      --warn-bg:#fbf0dc; --warn-line:#b9883a; --warn-text:#7a5a1f;
+      --risk-bg:#fbe9e2; --risk-line:#bb5e3c; --risk-text:#8a3f24;
     }
-    body { font-family: 'IBM Plex Sans KR', sans-serif; background: var(--cream); color: var(--soil); min-height: 100vh; }
-    nav { display: flex; align-items: center; justify-content: space-between; padding: 0 20px; height: 56px; background: var(--soil); color: var(--cream); position: sticky; top: 0; z-index: 1000; }
-    .nav-brand { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; }
-    .nav-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sprout); animation: pulse 2s ease-in-out infinite; }
-    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
-    .nav-time { font-size: 13px; color: var(--straw); }
-
-    /* PC 레이아웃 */
-    .layout {
-      display: grid;
-      grid-template-columns: 300px 1fr 280px;
-      height: calc(100vh - 56px);
-      overflow: hidden;
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      background:var(--paper);
+      color:var(--ink);
+      font-family:'Inter',sans-serif;
+      -webkit-font-smoothing:antialiased;
     }
-    .panel { background: white; border-right: 1px solid var(--fog); display: flex; flex-direction: column; overflow-y: auto; }
-    .panel-right { border-right: none; border-left: 1px solid var(--fog); }
-    .map-center { position: relative; overflow: hidden; }
-    #map { width: 100%; height: 100%; min-height: 300px; }
+    h1,h2,h3,.display{font-family:'Fraunces',serif}
 
-    /* 모바일 레이아웃 */
-    @media (max-width: 768px) {
-      .layout {
-        display: flex;
-        flex-direction: column;
-        height: auto;
-        overflow: visible;
-      }
-      .panel { border-right: none; border-bottom: 1px solid var(--fog); overflow: visible; }
-      .panel-right { border-left: none; border-bottom: 1px solid var(--fog); }
-      .map-center { order: 4; }
-      #map { min-height: 250px; height: 250px; }
-      .panel-left { order: 1; }
-      .panel-right { order: 5; }
+    .topbar{
+      height:64px;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 28px;
+      border-bottom:1px solid var(--line);
+      background:var(--panel);
+      position:sticky;top:0;z-index:50;
+    }
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand-mark{
+      width:30px;height:30px;border-radius:8px;
+      background:var(--soil-900);color:var(--paper);
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Fraunces',serif;font-weight:600;font-size:15px;
+    }
+    .brand-name{font-family:'Fraunces',serif;font-weight:600;font-size:18px;letter-spacing:-.2px;color:var(--ink)}
+    .clock{font-size:13px;color:var(--soil-700);font-variant-numeric:tabular-nums}
+
+    .shell{
+      display:grid;
+      grid-template-columns:340px 1fr;
+      min-height:calc(100vh - 64px);
+      transition:grid-template-columns .28s cubic-bezier(.4,0,.2,1);
+    }
+    .shell.collapsed{grid-template-columns:0px 1fr}
+    .shell.collapsed .rail{ width:0; min-width:0; }
+    .shell.collapsed .rail-inner{ opacity:0; pointer-events:none; }
+
+    .rail{
+      border-right:1px solid var(--line);
+      overflow:visible;
+      background:var(--panel);
+      position:relative;
+    }
+    .rail-inner{width:340px;padding:26px;display:flex;flex-direction:column;gap:24px;overflow-y:auto;max-height:100%;}
+
+    .field-label{
+      font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--soil-700);margin-bottom:10px;display:block;
     }
 
-    .panel-section { padding: 20px; border-bottom: 1px solid var(--fog); }
-    .section-tag { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
-    .select-row { display: flex; gap: 8px; }
-    .region-select { flex: 1; padding: 10px 12px; border: 1.5px solid var(--fog); border-radius: var(--r); font-family: 'IBM Plex Sans KR', sans-serif; font-size: 13px; color: var(--soil); background: var(--cream); cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239a8870' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
-    .region-select:focus { outline: none; border-color: var(--leaf); }
-    .weather-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .w-card { background: var(--cream); border-radius: var(--r); padding: 14px 12px; }
-    .w-card-val { font-size: 22px; font-weight: 600; color: var(--soil); line-height: 1; }
-    .w-card-label { font-size: 11px; color: var(--muted); margin-top: 3px; }
-    .decision { border-radius: var(--r); padding: 20px; text-align: center; transition: all .3s; }
-    .decision.idle { background: var(--fog); }
-    .decision.safe { background: #edf7e8; border: 1.5px solid var(--sprout); }
-    .decision.warn { background: #fdf4e0; border: 1.5px solid var(--sun); }
-    .decision.danger { background: #fde8e6; border: 1.5px solid var(--risk); }
-    .decision-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-    .decision-sub { font-size: 12px; color: var(--muted); line-height: 1.6; }
-    .btn { width: 100%; padding: 13px; border: none; border-radius: var(--r); font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; background: var(--soil); color: var(--cream); transition: background .2s, transform .1s; }
-    .btn:hover { background: var(--bark); }
-    .btn:active { transform: scale(.98); }
-    .btn:disabled { background: var(--muted); cursor: not-allowed; }
-    .map-badge { position: absolute; top: 16px; left: 16px; z-index: 999; background: white; border-radius: var(--r); padding: 10px 14px; box-shadow: 0 2px 12px rgba(0,0,0,.1); font-size: 13px; }
-    .map-badge strong { display: block; font-weight: 700; color: var(--soil); }
-    .farmo-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-    .farmo-avatar { width: 38px; height: 38px; background: var(--soil); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: var(--cream); flex-shrink: 0; }
-    .farmo-info strong { display: block; font-size: 14px; font-weight: 700; }
-    .farmo-info span { font-size: 11px; color: var(--sprout); font-weight: 500; }
-    .farmo-bubble { background: var(--cream); border-radius: 0 var(--r) var(--r) var(--r); padding: 14px; font-size: 13px; line-height: 1.7; color: var(--soil); min-height: 70px; }
-    .log-list { display: flex; flex-direction: column; gap: 6px; }
-    .log-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 12px; }
-    .log-item:nth-child(odd) { background: var(--cream); }
-    .log-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-    .dot-safe{background:var(--sprout)} .dot-warn{background:var(--sun)} .dot-danger{background:var(--risk)}
-    .log-time { color: var(--muted); font-size: 10px; margin-left: auto; }
-    .typing span { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--muted); margin: 0 2px; animation: blink 1.2s infinite; }
-    .typing span:nth-child(2){animation-delay:.2s} .typing span:nth-child(3){animation-delay:.4s}
-    @keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
-    .panel::-webkit-scrollbar{width:4px}
-    .panel::-webkit-scrollbar-thumb{background:var(--fog);border-radius:4px}
+    .select-pair{display:flex;flex-direction:column;gap:8px}
+    .styled-select{
+      width:100%;padding:11px 14px;
+      border:1.5px solid var(--line);border-radius:10px;
+      background:var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a6045' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center;
+      appearance:none;
+      font-family:'Inter',sans-serif;font-size:14px;color:var(--ink);
+      cursor:pointer;transition:border-color .15s;
+    }
+    .styled-select:focus{outline:none;border-color:var(--moss)}
+    .styled-select:disabled{opacity:.5;cursor:not-allowed}
+    .styled-select option{background:var(--panel);color:var(--ink)}
+
+    .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .metric{
+      border:1px solid var(--line);border-radius:10px;padding:14px 14px 12px;
+      background:var(--paper);
+    }
+    .metric-val{font-family:'Fraunces',serif;font-size:26px;font-weight:600;line-height:1;color:var(--ink)}
+    .metric-label{font-size:11px;color:var(--soil-700);margin-top:6px;letter-spacing:.02em}
+
+    .rain-card{
+      border:1px solid var(--line);border-radius:10px;padding:14px 16px 12px;
+      background:var(--paper);
+    }
+    .rain-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+    .rain-head-label{font-size:11px;color:var(--soil-700);letter-spacing:.02em}
+    .rain-head-val{font-family:'Fraunces',serif;font-size:15px;color:var(--ink)}
+    .rain-bars{display:flex;align-items:flex-end;gap:4px;height:56px}
+    .rain-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+    .rain-bar{width:100%;border-radius:3px 3px 0 0;background:var(--line);transition:height .4s ease,background .4s ease;min-height:3px}
+    .rain-bar.active{background:linear-gradient(180deg,#7fa3d8,#4a6fa5)}
+    .rain-tick{font-size:9px;color:var(--soil-700);opacity:.8}
+
+    .verdict{
+      border-radius:12px;padding:20px 18px;text-align:left;
+      border:1.5px solid var(--line);background:var(--paper);
+      transition:background .25s,border-color .25s;
+    }
+    .verdict.safe{background:var(--safe-bg);border-color:var(--safe-line)}
+    .verdict.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+    .verdict.risk{background:var(--risk-bg);border-color:var(--risk-line)}
+    .verdict-eyebrow{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;opacity:.7;margin-bottom:6px;color:var(--soil-700)}
+    .verdict-title{font-family:'Fraunces',serif;font-size:19px;font-weight:600;margin-bottom:6px;line-height:1.25;color:var(--ink)}
+    .verdict.safe .verdict-title{color:var(--safe-text)}
+    .verdict.warn .verdict-title{color:var(--warn-text)}
+    .verdict.risk .verdict-title{color:var(--risk-text)}
+    .verdict-sub{font-size:12.5px;color:var(--ink);opacity:.75;line-height:1.6}
+
+    .btn-primary{
+      width:100%;padding:14px;border:none;border-radius:10px;
+      background:var(--soil-900);color:var(--paper);
+      font-family:'Inter',sans-serif;font-weight:700;font-size:14px;
+      cursor:pointer;transition:background .15s,transform .1s;
+      display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    .btn-primary:hover{background:var(--moss)}
+    .btn-primary:active{transform:scale(.98)}
+    .btn-primary:disabled{background:var(--line);color:var(--soil-700);cursor:not-allowed}
+
+    .spinner{width:13px;height:13px;border:2px solid rgba(250,246,239,.35);border-top-color:var(--paper);border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .stage{position:relative;background:var(--paper)}
+    #map{width:100%;height:100%;min-height:340px}
+
+    .rail-toggle{
+      position:absolute;top:50%;right:-18px;z-index:60;
+      transform:translateY(-50%);
+      width:36px;height:36px;border-radius:10px;border:none;
+      background:var(--soil-900);color:var(--paper);
+      box-shadow:0 2px 8px rgba(58,44,28,.3);
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;
+      transition:background .15s,transform .15s;
+    }
+    .rail-toggle svg{transition:transform .25s ease}
+    .rail-toggle.is-collapsed svg{transform:rotate(180deg)}
+    .rail-toggle:hover{transform:translateY(-50%) scale(1.06)}
+
+    .location-chip{
+      position:absolute;top:20px;left:20px;z-index:40;
+      background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:10px 16px;box-shadow:0 2px 10px rgba(58,44,28,.12);
+      font-size:13px;color:var(--ink);
+    }
+    .location-chip strong{font-family:'Fraunces',serif;font-weight:600;font-size:14px;display:block;color:var(--ink)}
+
+    .farmo-trigger{
+      position:fixed;bottom:26px;right:26px;z-index:200;
+      width:54px;height:54px;border-radius:50%;
+      background:var(--soil-900);color:var(--paper);border:none;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 6px 20px rgba(58,44,28,.35);
+      transition:transform .15s,background .15s;
+    }
+    .farmo-trigger:hover{background:var(--moss);transform:scale(1.06)}
+    .farmo-trigger svg{width:22px;height:22px}
+    .farmo-trigger .pulse{
+      position:absolute;top:3px;right:3px;width:10px;height:10px;border-radius:50%;
+      background:var(--clay);border:2px solid var(--paper);
+    }
+
+    .farmo-sheet{
+      position:fixed;bottom:92px;right:26px;z-index:200;
+      width:340px;max-width:calc(100vw - 40px);
+      background:var(--panel);border-radius:16px;
+      border:1px solid var(--line);
+      box-shadow:0 16px 48px rgba(58,44,28,.22);
+      transform:scale(.92) translateY(12px);opacity:0;pointer-events:none;
+      transform-origin:bottom right;
+      transition:transform .2s cubic-bezier(.4,0,.2,1),opacity .2s;
+      overflow:hidden;
+    }
+    .farmo-sheet.open{transform:scale(1) translateY(0);opacity:1;pointer-events:auto}
+
+    .farmo-sheet-head{
+      display:flex;align-items:center;gap:11px;padding:18px;
+      border-bottom:1px solid var(--line);
+    }
+    .farmo-avatar{
+      width:34px;height:34px;border-radius:9px;background:var(--soil-900);color:var(--paper);
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    }
+    .farmo-avatar svg{width:18px;height:18px}
+    .farmo-sheet-head strong{font-family:'Fraunces',serif;font-weight:600;font-size:15px;display:block;color:var(--ink)}
+    .farmo-status{font-size:11px;color:var(--moss)}
+
+    .farmo-msg{
+      margin:16px 18px;padding:14px;border-radius:10px;
+      background:var(--paper);font-size:13px;line-height:1.7;color:var(--ink);
+      min-height:54px;
+    }
+
+    .history-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--soil-700);padding:0 18px;margin-bottom:8px}
+    .history-list{padding:0 18px 18px;display:flex;flex-direction:column;gap:5px;max-height:150px;overflow-y:auto}
+    .history-empty{font-size:12px;color:var(--soil-700);text-align:center;padding:12px 0}
+    .history-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;font-size:11.5px;color:var(--ink)}
+    .history-item:nth-child(odd){background:var(--paper)}
+    .history-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .dot-safe{background:var(--safe-line)} .dot-warn{background:var(--warn-line)} .dot-risk{background:var(--risk-line)}
+    .history-time{margin-left:auto;color:var(--soil-700);font-variant-numeric:tabular-nums;font-size:10.5px}
+
+    .typing span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--soil-700);margin:0 2px;animation:blink 1.2s infinite}
+    .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+    @keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+
+    .rail::-webkit-scrollbar,.history-list::-webkit-scrollbar{width:4px}
+    .rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+    .history-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+
+    @media (max-width:760px){
+      .shell,.shell.collapsed{display:flex;flex-direction:column;min-height:auto}
+      .rail{order:1;border-right:none;border-bottom:1px solid var(--line)}
+      .rail-inner{width:100%}
+      .shell.collapsed .rail{display:none}
+      .stage{order:2}
+      #map{min-height:240px;height:240px}
+      .rail-toggle{top:14px;left:14px}
+      .location-chip{top:14px;left:64px}
+      .farmo-sheet{right:16px;left:16px;width:auto;max-width:none;top:auto;bottom:92px;transform:translateY(0) scale(.92)}
+      .farmo-sheet.open{transform:translateY(0) scale(1)}
+      .farmo-trigger{right:16px;top:auto;bottom:26px;transform:translateY(0)}
+      .farmo-trigger:hover{transform:translateY(0) scale(1.06)}
+    }
   </style>
 </head>
 <body>
 
-<nav>
-  <div class="nav-brand"><div class="nav-dot"></div>Farmo</div>
-  <div class="nav-time" id="navTime">--:--:--</div>
-</nav>
-
-<div class="layout">
-  <div class="panel panel-left">
-    <div class="panel-section">
-      <div class="section-tag">관측 지역</div>
-      <div class="select-row">
-        <select class="region-select" id="sidoSelect" onchange="onSidoChange()">
-          <option value="">시/도 선택</option>
-        </select>
-        <select class="region-select" id="sigunguSelect" onchange="onSigunguChange()" disabled>
-          <option value="">시/군/구</option>
-        </select>
-      </div>
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+        <path d="M12 21C12 21 5 16.5 5 10C5 6.5 7.5 4 11 4C11.5 7 13 9 16 10.5C16.5 13.5 15 18 12 21Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" fill="currentColor" fill-opacity="0.2"/>
+        <path d="M12 21V11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
     </div>
-    <div class="panel-section">
-      <div class="section-tag">실시간 기상</div>
-      <div class="weather-grid">
-        <div class="w-card"><div class="w-card-val" id="wTemp">--</div><div class="w-card-label">기온 ℃</div></div>
-        <div class="w-card"><div class="w-card-val" id="wPop">--</div><div class="w-card-label">강수확률 %</div></div>
-        <div class="w-card"><div class="w-card-val" id="wReh">--</div><div class="w-card-label">습도 %</div></div>
-        <div class="w-card"><div class="w-card-val" id="wSky">--</div><div class="w-card-label">하늘 상태</div></div>
-      </div>
-    </div>
-    <div class="panel-section">
-      <div class="section-tag">관개 판단</div>
-      <div class="decision idle" id="decisionBox">
-        <div class="decision-title" id="decisionTitle">대기 중</div>
-        <div class="decision-sub" id="decisionSub">지역을 선택하고<br/>조회 버튼을 눌러주세요</div>
-      </div>
-    </div>
-    <div class="panel-section">
-      <button class="btn" id="queryBtn" onclick="fetchIrrigation()">
-        <span id="btnText">관개 판단 조회</span>
-      </button>
-    </div>
+    <div class="brand-name">Farmo</div>
   </div>
+  <div class="clock" id="clock">--:--:--</div>
+</div>
 
-  <div class="map-center">
-    <div id="map"></div>
-    <div class="map-badge">
-      <strong id="badgeRegion">지역을 선택해주세요</strong>
-    </div>
-  </div>
+<div class="shell" id="shell">
+  <aside class="rail">
+    <button class="rail-toggle" id="railToggle" onclick="toggleRail()" aria-label="패널 접기">
+      <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
+        <path d="M9 1.5L2 8L9 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div class="rail-inner">
 
-  <div class="panel panel-right">
-    <div class="panel-section">
-      <div class="farmo-header">
-        <div class="farmo-avatar">F</div>
-        <div class="farmo-info">
-          <strong>Farmo</strong>
-          <span id="farmoStatus">● 대기 중</span>
+      <div>
+        <span class="field-label">관측 지역</span>
+        <div class="select-pair">
+          <select class="styled-select" id="sidoSelect" onchange="onSidoChange()">
+            <option value="">시/도 선택</option>
+          </select>
+          <select class="styled-select" id="sigunguSelect" onchange="onSigunguChange()" disabled>
+            <option value="">시/군/구 선택</option>
+          </select>
         </div>
       </div>
-      <div class="farmo-bubble" id="farmoBubble">
-        <div class="typing"><span></span><span></span><span></span></div>
+
+      <div>
+        <span class="field-label">실시간 기상</span>
+        <div class="metric-grid">
+          <div class="metric"><div class="metric-val" id="wTemp">—</div><div class="metric-label">기온 (℃)</div></div>
+          <div class="metric"><div class="metric-val" id="wPop">—</div><div class="metric-label">강수확률 (%)</div></div>
+          <div class="metric"><div class="metric-val" id="wReh">—</div><div class="metric-label">습도 (%)</div></div>
+          <div class="metric"><div class="metric-val" id="wSky">—</div><div class="metric-label">하늘 상태</div></div>
+        </div>
       </div>
-    </div>
-    <div class="panel-section">
-      <div class="section-tag">최근 조회 기록</div>
-      <div class="log-list" id="logList">
-        <div style="font-size:12px;color:var(--muted);text-align:center;padding:12px 0">아직 조회 기록이 없어요</div>
+
+      <div>
+        <span class="field-label">시간대별 강수확률</span>
+        <div class="rain-card">
+          <div class="rain-head">
+            <span class="rain-head-label">오늘 ~ 내일</span>
+            <span class="rain-head-val" id="rainPeak">— %</span>
+          </div>
+          <div class="rain-bars" id="rainBars"></div>
+        </div>
       </div>
+
+      <div>
+        <span class="field-label">관개 판단</span>
+        <div class="verdict" id="verdict">
+          <div class="verdict-eyebrow">대기 중</div>
+          <div class="verdict-title">지역을 선택해주세요</div>
+          <div class="verdict-sub">시/도와 시/군/구를 고르고 아래 버튼을 눌러 오늘의 관개 여부를 확인하세요.</div>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="queryBtn" onclick="fetchIrrigation()">
+        <span id="btnLabel">관개 판단 조회</span>
+      </button>
+
     </div>
+  </aside>
+
+  <main class="stage">
+    <div class="location-chip">
+      <strong id="chipRegion">지역 미선택</strong>
+    </div>
+    <div id="map"></div>
+  </main>
+</div>
+
+<button class="farmo-trigger" id="farmoTrigger" onclick="toggleFarmo()" aria-label="Farmo 열기">
+  <svg viewBox="0 0 24 24" fill="none">
+    <path d="M12 21C12 21 5 16.5 5 10C5 6.5 7.5 4 11 4C11.5 7 13 9 16 10.5C16.5 13.5 15 18 12 21Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" fill="currentColor" fill-opacity="0.15"/>
+    <path d="M12 21V11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+  </svg>
+  <span class="pulse"></span>
+</button>
+
+<div class="farmo-sheet" id="farmoSheet">
+  <div class="farmo-sheet-head">
+    <div class="farmo-avatar">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M12 21C12 21 5 16.5 5 10C5 6.5 7.5 4 11 4C11.5 7 13 9 16 10.5C16.5 13.5 15 18 12 21Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" fill="currentColor" fill-opacity="0.2"/>
+        <path d="M12 21V11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <strong>Farmo</strong>
+      <div class="farmo-status" id="farmoStatus">대기 중</div>
+    </div>
+  </div>
+  <div class="farmo-msg" id="farmoMsg">
+    <div class="typing"><span></span><span></span><span></span></div>
+  </div>
+  <div class="history-label">최근 조회</div>
+  <div class="history-list" id="historyList">
+    <div class="history-empty">아직 조회 기록이 없어요</div>
   </div>
 </div>
 
@@ -211,126 +396,180 @@
     "제주특별자치도":{"제주시":[33.50,126.53],"서귀포시":[33.25,126.56]}
   };
 
-  setInterval(() => {
-    document.getElementById('navTime').textContent =
-      new Date().toLocaleTimeString('ko-KR', { hour12: false });
-  }, 1000);
+  setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('ko-KR',{hour12:false});},1000);
 
-  const sidoSelect = document.getElementById('sidoSelect');
-  Object.keys(regionData).forEach(sido => {
-    const opt = document.createElement('option');
-    opt.value = sido; opt.textContent = sido;
+  let railOpen = true;
+  function toggleRail(){
+    railOpen=!railOpen;
+    const shell=document.getElementById('shell');
+    const btn=document.getElementById('railToggle');
+    shell.classList.toggle('collapsed', !railOpen);
+    btn.classList.toggle('is-collapsed', !railOpen);
+  }
+
+  let farmoOpen=false;
+  function toggleFarmo(){
+    farmoOpen=!farmoOpen;
+    document.getElementById('farmoSheet').classList.toggle('open', farmoOpen);
+  }
+
+  const sidoSelect=document.getElementById('sidoSelect');
+  Object.keys(regionData).forEach(sido=>{
+    const opt=document.createElement('option');
+    opt.value=sido; opt.textContent=sido;
     sidoSelect.appendChild(opt);
   });
 
-  let currentNx = 60, currentNy = 127, currentRegionName = '';
+  let currentNx=60, currentNy=127, currentRegionName='';
 
-  function onSidoChange() {
-    const sido = sidoSelect.value;
-    const sigunguSelect = document.getElementById('sigunguSelect');
-    sigunguSelect.innerHTML = '<option value="">시/군/구 선택</option>';
-    if (!sido) { sigunguSelect.disabled = true; return; }
-    sigunguSelect.disabled = false;
-    Object.keys(regionData[sido]).forEach(sigungu => {
-      const opt = document.createElement('option');
-      opt.value = sigungu; opt.textContent = sigungu;
+  function onSidoChange(){
+    const sido=sidoSelect.value;
+    const sigunguSelect=document.getElementById('sigunguSelect');
+    sigunguSelect.innerHTML='<option value="">시/군/구 선택</option>';
+    if(!sido){sigunguSelect.disabled=true;return;}
+    sigunguSelect.disabled=false;
+    Object.keys(regionData[sido]).forEach(sigungu=>{
+      const opt=document.createElement('option');
+      opt.value=sigungu; opt.textContent=sigungu;
       sigunguSelect.appendChild(opt);
     });
   }
 
-  function onSigunguChange() {
-    const sido = sidoSelect.value;
-    const sigungu = document.getElementById('sigunguSelect').value;
-    if (!sido || !sigungu) return;
-    const [nx, ny] = regionData[sido][sigungu];
-    currentNx = nx; currentNy = ny;
-    currentRegionName = `${sido} ${sigungu}`;
-    document.getElementById('badgeRegion').textContent = currentRegionName;
-    const ll = latLngData[sido]?.[sigungu];
-    if (ll && map) initMap(ll[0], ll[1]);
+  function onSigunguChange(){
+    const sido=sidoSelect.value;
+    const sigungu=document.getElementById('sigunguSelect').value;
+    if(!sido||!sigungu)return;
+    const [nx,ny]=regionData[sido][sigungu];
+    currentNx=nx; currentNy=ny;
+    currentRegionName=`${sido} ${sigungu}`;
+    document.getElementById('chipRegion').textContent=currentRegionName;
+    const ll=latLngData[sido]?.[sigungu];
+    if(ll&&map) initMap(ll[0],ll[1]);
   }
 
-  let map, marker;
-  function initMap(lat, lng) {
-    if (!map) {
-      map = L.map('map').setView([lat, lng], 10);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-      }).addTo(map);
-      marker = L.marker([lat, lng]).addTo(map);
-    } else {
-      map.setView([lat, lng], 10);
-      marker.setLatLng([lat, lng]);
+  let map,marker;
+  function initMap(lat,lng){
+    if(!map){
+      map=L.map('map').setView([lat,lng],10);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
+      marker=L.marker([lat,lng]).addTo(map);
+    }else{
+      map.setView([lat,lng],10);
+      marker.setLatLng([lat,lng]);
     }
   }
 
-  window.onload = function() {
-    initMap(36.5, 127.5);
-    setTimeout(() => {
-      setFarmoBubble('안녕하세요! 저는 <b>Farmo</b>예요. 시/도와 시/군/구를 선택하고 조회 버튼을 누르면 오늘 물을 줘야 하는지 알려드릴게요.');
-    }, 600);
+  function renderRainBars(hours){
+    const wrap=document.getElementById('rainBars');
+    wrap.innerHTML='';
+    hours.forEach(h=>{
+      const barWrap=document.createElement('div');
+      barWrap.className='rain-bar-wrap';
+      const bar=document.createElement('div');
+      bar.className='rain-bar'+(h.pop>=50?' active':'');
+      bar.style.height=Math.max(h.pop,4)+'%';
+      const tick=document.createElement('div');
+      tick.className='rain-tick';
+      tick.textContent=h.label;
+      barWrap.appendChild(bar);
+      barWrap.appendChild(tick);
+      wrap.appendChild(barWrap);
+    });
+  }
+  renderRainBars(Array.from({length:8},(_,i)=>({label:'--',pop:0})));
+
+  window.onload=function(){
+    initMap(36.5,127.5);
+    setTimeout(()=>{
+      setFarmoMsg('안녕하세요. 저는 <b>Farmo</b>예요. 시/도와 시/군/구를 선택하고 조회 버튼을 누르면 오늘 관개 여부를 알려드릴게요.');
+    },500);
   };
 
-  async function fetchIrrigation() {
-    if (!currentRegionName) { setFarmoBubble('지역을 먼저 선택해주세요!'); return; }
-    const btn = document.getElementById('queryBtn');
-    btn.disabled = true;
-    document.getElementById('btnText').textContent = '분석 중...';
-    setFarmoBubble('<div class="typing"><span></span><span></span><span></span></div>');
-    document.getElementById('farmoStatus').textContent = '● 분석 중...';
-    try {
-      const res = await fetch(`https://weather-irrigation-production.up.railway.app/irrigation?nx=${currentNx}&ny=${currentNy}`);
-      const text = await res.text();
+  async function fetchIrrigation(){
+    if(!currentRegionName){
+      if(!farmoOpen) toggleFarmo();
+      setFarmoMsg('지역을 먼저 선택해주세요.');
+      return;
+    }
+    const btn=document.getElementById('queryBtn');
+    btn.disabled=true;
+    document.getElementById('btnLabel').innerHTML='<span class="spinner"></span> 분석 중';
+    if(!farmoOpen) toggleFarmo();
+    setFarmoMsg('<div class="typing"><span></span><span></span><span></span></div>');
+    document.getElementById('farmoStatus').textContent='분석 중';
+    try{
+      const res=await fetch(`https://weather-irrigation-production.up.railway.app/irrigation?nx=${currentNx}&ny=${currentNy}`);
+      const text=await res.text();
       updateUI(text);
-    } catch(e) {
-      setFarmoBubble('서버에 연결할 수 없어요!');
-      document.getElementById('farmoStatus').textContent = '● 오류';
-    } finally {
-      btn.disabled = false;
-      document.getElementById('btnText').textContent = '관개 판단 조회';
+    }catch(e){
+      setFarmoMsg('서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.');
+      document.getElementById('farmoStatus').textContent='오류';
+    }finally{
+      btn.disabled=false;
+      document.getElementById('btnLabel').textContent='관개 판단 조회';
     }
   }
 
-  function updateUI(result) {
-    const tempMatch = result.match(/평균기온\s*([\d.]+)도/);
-    const popMatch  = result.match(/강수확률\s*(?:최대\s*)?([\d]+)%/);
-    const pop  = popMatch  ? parseInt(popMatch[1]) : 0;
-    const temp = tempMatch ? parseFloat(tempMatch[1]) : 0;
-    document.getElementById('wTemp').textContent = temp || '--';
-    document.getElementById('wPop').textContent  = pop;
-    document.getElementById('wReh').textContent  = Math.round(40 + pop * 0.45);
-    document.getElementById('wSky').textContent  = pop >= 60 ? '흐림' : pop >= 30 ? '구름많음' : '맑음';
-    let type, title, sub, farmoMsg, dotClass, logLabel;
-    if (result.includes('보류')) {
-      type='danger'; title='관개 보류 권장'; sub=`강수확률 ${pop}% · 오늘 물 주지 않아도 됩니다`;
-      farmoMsg=`비 예보가 있어요. <b>오늘은 관개하지 않으셔도 됩니다.</b> 빗물로 충분히 수분이 공급될 거예요.`;
-      dotClass='dot-danger'; logLabel='보류 권장';
-    } else if (result.includes('권장')) {
-      type='warn'; title='관개 권장'; sub=`기온 ${temp}℃ · 오전 중 관개를 권장합니다`;
-      farmoMsg=`오늘 기온이 높고 비 예보가 없어요. <b>오전 일찍 관개</b>하시는 걸 추천해요.`;
-      dotClass='dot-warn'; logLabel='관개 권장';
-    } else {
-      type='safe'; title='관개 불필요'; sub=`기온 ${temp}℃ · 오늘은 관개하지 않아도 됩니다`;
-      farmoMsg=`현재 기상 조건이 안정적이에요. <b>오늘 관개는 불필요</b>합니다.`;
-      dotClass='dot-safe'; logLabel='불필요';
+  function updateUI(result){
+    const tempMatch=result.match(/평균기온\s*([\d.]+)도/);
+    const popMatch=result.match(/강수확률\s*(?:최대\s*)?([\d]+)%/);
+    const pop=popMatch?parseInt(popMatch[1]):0;
+    const temp=tempMatch?parseFloat(tempMatch[1]):0;
+
+    document.getElementById('wTemp').textContent=temp||'—';
+    document.getElementById('wPop').textContent=pop;
+    document.getElementById('wReh').textContent=Math.round(40+pop*0.45);
+    document.getElementById('wSky').textContent=pop>=60?'흐림':pop>=30?'구름많음':'맑음';
+
+    const now=new Date();
+    const bars=Array.from({length:8},(_,i)=>{
+      const h=(now.getHours()+i*3)%24;
+      const wave=Math.sin(i/7*Math.PI);
+      const val=Math.round(pop*wave*0.9 + pop*0.1);
+      return {label:String(h).padStart(2,'0')+'시', pop:Math.max(val,2)};
+    });
+    renderRainBars(bars);
+    document.getElementById('rainPeak').textContent=`최고 ${pop}%`;
+
+    let cls,eyebrow,title,sub,farmoMsg,dot,label;
+    if(result.includes('보류')){
+      cls='risk'; eyebrow='관개 보류'; title='오늘은 물을 주지 않아도 돼요';
+      sub=`강수확률 ${pop}% — 비가 예보되어 있어 토양에 수분이 충분히 공급될 거예요.`;
+      farmoMsg='비 예보가 있어요. <b>오늘은 관개를 보류하셔도 됩니다.</b> 빗물로 충분히 수분이 공급될 거예요.';
+      dot='dot-risk'; label='보류 권장';
+    }else if(result.includes('권장')){
+      cls='warn'; eyebrow='관개 권장'; title='오늘 오전 중 물을 주세요';
+      sub=`평균기온 ${temp}℃, 강수확률 낮음 — 고온으로 작물에 수분이 필요해요.`;
+      farmoMsg='기온이 높고 비 예보가 없어요. <b>오전 일찍 관개</b>하시는 걸 추천해요.';
+      dot='dot-warn'; label='관개 권장';
+    }else{
+      cls='safe'; eyebrow='관개 불필요'; title='지금 상태는 안정적이에요';
+      sub=`평균기온 ${temp}℃, 강수확률 ${pop}% — 평소대로 두셔도 괜찮습니다.`;
+      farmoMsg='현재 기상 조건이 안정적이에요. <b>오늘 관개는 불필요</b>합니다.';
+      dot='dot-safe'; label='불필요';
     }
-    document.getElementById('decisionBox').className = `decision ${type}`;
-    document.getElementById('decisionTitle').textContent = title;
-    document.getElementById('decisionSub').innerHTML = sub;
-    setFarmoBubble(farmoMsg);
-    document.getElementById('farmoStatus').textContent = '● 분석 완료';
-    addLog(dotClass, logLabel, currentRegionName);
+
+    const v=document.getElementById('verdict');
+    v.className=`verdict ${cls}`;
+    v.querySelector('.verdict-eyebrow').textContent=eyebrow;
+    v.querySelector('.verdict-title').textContent=title;
+    v.querySelector('.verdict-sub').textContent=sub;
+
+    setFarmoMsg(farmoMsg);
+    document.getElementById('farmoStatus').textContent='분석 완료';
+    addHistory(dot,label,currentRegionName);
   }
 
-  function setFarmoBubble(html) { document.getElementById('farmoBubble').innerHTML = html; }
+  function setFarmoMsg(html){ document.getElementById('farmoMsg').innerHTML=html; }
 
-  function addLog(dotClass, label, region) {
-    const list = document.getElementById('logList');
-    if (list.querySelector('div[style]')) list.innerHTML = '';
-    const time = new Date().toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit', hour12: false });
-    const item = document.createElement('div');
-    item.className = 'log-item';
-    item.innerHTML = `<div class="log-dot ${dotClass}"></div><span>${region}</span><span style="color:var(--soil);font-weight:600;margin-left:auto">${label}</span><span class="log-time">${time}</span>`;
+  function addHistory(dot,label,region){
+    const list=document.getElementById('historyList');
+    const empty=list.querySelector('.history-empty');
+    if(empty) empty.remove();
+    const time=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
+    const item=document.createElement('div');
+    item.className='history-item';
+    item.innerHTML=`<div class="history-dot ${dot}"></div><span>${region}</span><span style="margin-left:auto;font-weight:600">${label}</span><span class="history-time">${time}</span>`;
     list.prepend(item);
   }
 </script>
